@@ -11,7 +11,7 @@ if os.name != 'nt':
 else:
     import msvcrt
 
-TEAM_NAME = b'ohaddddddddddd\n'
+TEAM_NAME = b'ohad\n'
 MAGIC_COOKIE = 0xabcddcba
 
 
@@ -29,7 +29,7 @@ def search_server(i):
         try:
             data, addr = client.recvfrom(10)
             # print(data, addr)
-            cookie, msg_type, port_number = struct.unpack('IBH', data)
+            cookie, msg_type, port_number = struct.unpack('>IBH', data)
             if cookie == MAGIC_COOKIE and msg_type == 0x2:  # and port_number == 2075
                 # print("received ", hex(cookie), hex(msg_type), port_number, "from", addr[0])
                 print("Received offer from", addr[0], ", attempting to connect...")
@@ -51,7 +51,7 @@ def connect_to_server(server_address):
         print(message) # welcome message
         return port
     except Exception as e:
-        print("Could not send team name! Trying to find a different server...", e)
+        print("Could not send team name! Trying to find a different server...")
         return 0
 
 
@@ -70,10 +70,8 @@ def client_game(server_address, my_port):
     flag = False
     while 1:
         try:
-           
             readable, writable, exceptional = select.select(socketList, outputs, [], 0)  # todo: remove loop
             for sock in readable:
-                print("try")
                 if sock is listen_socket:  # Server is trying to connect and send end message
                     connection, client_address = sock.accept()
                     connection.setblocking(0)
@@ -81,10 +79,8 @@ def client_game(server_address, my_port):
                     flag = True
                     socketList.remove(sock)
                     sock.close()
-                    print("if1")
 
                 else:  # The client should receive end message
-                    print("if2")
                     data = sock.recv(1024)
                     print(str(data, "utf-8"))
                     sock.close()
@@ -103,6 +99,7 @@ def client_game(server_address, my_port):
 
         except Exception as e:
             print("Error while trying to send characters!", e)
+            break
     # close all open sockets
     for open_socket in socketList:
         open_socket.setblocking(1)
@@ -134,5 +131,8 @@ if __name__ == "__main__":
             server_address = search_server(i)
             i += 1
             my_port = connect_to_server(server_address)
+            if my_port == 0:
+                print("Server disconnected, listening for offer requests...")
+                continue
             client_game(server_address, my_port)
             time.sleep(0.1)

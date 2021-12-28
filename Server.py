@@ -9,7 +9,6 @@ import itertools
 import random
 from concurrent.futures import ThreadPoolExecutor
 
-
 MAGIC_COOKIE = 0xabcddcba
 MESSAGE_TYPE = 0X2
 VIRTUAL_NETWORK = 'eth1'
@@ -19,12 +18,9 @@ TIME_LIMIT = 10
 BROADCAST_PORT = 13117
 BROADCAST_INTERVAL = 1
 
-
-
-
 def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     # creat udp socket and send message in Brodcast_port (13117)
-    i=0
+    i = 0
     x = socket.gethostbyname(socket.gethostname()) #get ip
     ip = x if os.name == 'nt' else get_if_addr(VIRTUAL_NETWORK)
     print("Server started, listening on ip address", ip)
@@ -36,12 +32,11 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     # Set a timeout
     udp_server.settimeout(0.3)
 
-    brodcast_message = struct.pack('IBH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
+    brodcast_message = struct.pack('>IBH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
     while flag1: #time.time() - start_time < time_limit:
         try:
-            i+=1
-            
-            print("brodcast send",i,flag1)
+            i += 1
+            #print("brodcast send",i,flag1)
             udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
         except Exception as e:
             print("Broadcasting error!", e)
@@ -103,7 +98,6 @@ def listen_for_clients( time_limit=TIME_LIMIT):
             sock.close()
         time.sleep(0.1)
     serverSocket.setblocking(1)
-
     return teamIpNameDict, socketsList, serverSocket
 
 def randomQuestion():
@@ -131,6 +125,7 @@ def randomQuestion():
     return
 
 def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
+    time.sleep(10)#wait 10 sec before start the game.
     print("start game")
     player1 = []
     player2 = []
@@ -174,10 +169,10 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             print("Error while sending starting messages!", e)
 
     start_time = time.time()
-    finalMessage=''
+    finalMessage = ''
     listSockets = [server] 
     socket_ips = {}
-    flag =False
+    flag = False
     while listSockets and time.time() - start_time < time_limit and not flag :
         # try:
         readable, writable, exceptional = select.select(listSockets, [], listSockets, 0)
@@ -188,16 +183,11 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 connection.setblocking(0)
                 listSockets.append(connection)
                 socket_ips[connection] = client_address[0]
-
             else:  # Client send answer
                 data = sock.recv(1) # reading anser from client
                 flag = True
                 userAns = data.decode('utf-8')
-
-
-
                 curP = teams_dictionary[socket_ips[connection]][0] 
-
                 if curP == teamName1:
                     secP = teamName1
                 else:
@@ -259,14 +249,14 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor() as executor:
         while 1:
             broadcast1 = executor.submit(Broadcast)
+            print("brodcast")
             teams_future = executor.submit(listen_for_clients)
             team_names, sockets, server = teams_future.result()
             if len(sockets)-1 >= NUM_OF_TEAMS:
                 match = executor.submit(game(team_names, sockets, server))
-                flag1=True
+                flag1 = True
             else:
                 i = 0 
-                message = "Cant play alone"
                 for open_socket in sockets:
                     open_socket.close()
                     print("close socket")
