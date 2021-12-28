@@ -7,12 +7,13 @@ from scapy.arch import get_if_addr
 import concurrent.futures
 import itertools
 import random
+from concurrent.futures import ThreadPoolExecutor
 
 
 MAGIC_COOKIE = 0xabcddcba
 MESSAGE_TYPE = 0X2
 VIRTUAL_NETWORK = 'eth1'
-NUM_OF_TEAMS = 1
+NUM_OF_TEAMS = 2
 SERVER_TCP_PORT = 2075
 TIME_LIMIT = 10
 BROADCAST_PORT = 13117
@@ -20,10 +21,10 @@ BROADCAST_INTERVAL = 1
 
 
 
+
 def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
-
-# creat udp socket and send message in Brodcast_port (13117)
-
+    # creat udp socket and send message in Brodcast_port (13117)
+    i=0
     x = socket.gethostbyname(socket.gethostname()) #get ip
     ip = x if os.name == 'nt' else get_if_addr(VIRTUAL_NETWORK)
     print("Server started, listening on ip address", ip)
@@ -36,26 +37,33 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     udp_server.settimeout(0.3)
 
     brodcast_message = struct.pack('IBH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
-    while time.time() - start_time < time_limit:
-        try:    
+    while flag1: #time.time() - start_time < time_limit:
+        try:
+            i+=1
+            
+            print("brodcast send",i,flag1)
             udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
         except Exception as e:
             print("Broadcasting error!", e)
             return False
         time.sleep(interval)
+    print("end brodcast")    
     udp_server.close()
     return True
 
 
 def listen_for_clients( time_limit=TIME_LIMIT):
-#Open server socket in SERVER_TCP_PORT and wait for client to connect 
+    global flag1
+    flag1 = True
+    #Open server socket in SERVER_TCP_PORT and wait for client to connect 
     start_time = time.time()
     #Open server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
     serverSocket.setblocking(0)
     while True and time.time() - start_time < time_limit:
         try:
-            serverSocket.bind((socket.gethostname(), SERVER_TCP_PORT ))
+            serverSocket.bind(('', SERVER_TCP_PORT ))
+            
             break
         except Exception as massage: 
             print('Bind error. Message:', massage)
@@ -64,9 +72,10 @@ def listen_for_clients( time_limit=TIME_LIMIT):
     serverSocket.listen(5)
     socketsList = [serverSocket]
     teamIpNameDict = {}  # team_ip : team_name
-
-    while socketsList and time.time() - start_time < time_limit:
-        readable, writable, exceptional = select.select(socketsList, [], socketsList, (time_limit - (time.time() - start_time))) 
+    i = 0
+    flag1 = True
+    while socketsList and flag1: #and time.time() - start_time < time_limit:
+        readable, writable, exceptional = select.select(socketsList, [], socketsList, 0) 
         for sock in readable:
             if sock is serverSocket:  
                 connection, client_address = sock.accept() # connection 1 socket 
@@ -76,6 +85,9 @@ def listen_for_clients( time_limit=TIME_LIMIT):
 
             else:  # The client should sent team's name
                 data = sock.recv(1024) # Recive data from client 
+                i += 1
+                if i == 2:
+                    flag1 = False
                 if teamIpNameDict[sock][0] == None:
                     if data:
                         teamIpNameDict[sock] = (str(data, "utf-8")[0:-1], teamIpNameDict[sock][1]) #name
@@ -119,6 +131,7 @@ def randomQuestion():
     return
 
 def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
+    print("start game")
     player1 = []
     player2 = []
     teamName1 = ""
@@ -182,7 +195,6 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 userAns = data.decode('utf-8')
 
 
-                print("team1 ",teamName1,"  team2 ",teamName2)
 
                 curP = teams_dictionary[socket_ips[connection]][0] 
 
@@ -190,9 +202,6 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                     secP = teamName1
                 else:
                     secP = teamName2
-                
-                print(curP,secP)
-
                 try :
                     if int(userAns) == realAns: # check if right ans                        
                         finalMessage= whoWon(curP,userAns)
@@ -220,8 +229,11 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
         # except Exception as e:
         #     print("Error while receiving keys!", e)
     #send the final message to all clinet
+
     for address in clinetAddresses:
         try:
+            if finalMessage=='':
+                finalMessage = "its a Draw!"
             running_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             running_socket.connect(address)
             running_socket.sendall(bytes(finalMessage, "utf-8"))  # TODO
@@ -231,6 +243,9 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             print("Error while sending end messages!", e)
     # server.setblocking(1)
     server.close()
+    flag1=True
+
+    print("game end")
 
 def whoWon(name,ans):
     msg = "\nGame over!\nThe correct answer was " + ans + "!\n"
@@ -240,7 +255,7 @@ def whoWon(name,ans):
 
 
 if __name__ == "__main__":
-    
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         while 1:
             broadcast1 = executor.submit(Broadcast)
@@ -248,9 +263,29 @@ if __name__ == "__main__":
             team_names, sockets, server = teams_future.result()
             if len(sockets)-1 >= NUM_OF_TEAMS:
                 match = executor.submit(game(team_names, sockets, server))
+                flag1=True
             else:
-                i=0
+                i = 0 
+                message = "Cant play alone"
                 for open_socket in sockets:
                     open_socket.close()
                     print("close socket")
     executor.shutdown()
+
+# if __name__ == "__main__":
+
+#     executor = ThreadPoolExecutor(2)
+#     while 1:
+#         broadcast1 = executor.submit(Broadcast)
+#         print("end brodcast")
+#         teams_future = executor.submit(listen_for_clients)
+#         team_names, sockets, server = teams_future.result()
+#         if len(sockets)-1 >= NUM_OF_TEAMS:
+#             match = executor.submit(game(team_names, sockets, server))
+#         else:
+#             i = 0 
+#             message = "Cant play alone"
+#             for open_socket in sockets:
+#                 open_socket.close()
+#                 print("close socket")
+# executor.shutdown()

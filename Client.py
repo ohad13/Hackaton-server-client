@@ -70,8 +70,10 @@ def client_game(server_address, my_port):
     flag = False
     while 1:
         try:
+           
             readable, writable, exceptional = select.select(socketList, outputs, [], 0)  # todo: remove loop
             for sock in readable:
+                print("try")
                 if sock is listen_socket:  # Server is trying to connect and send end message
                     connection, client_address = sock.accept()
                     connection.setblocking(0)
@@ -79,8 +81,10 @@ def client_game(server_address, my_port):
                     flag = True
                     socketList.remove(sock)
                     sock.close()
+                    print("if1")
 
                 else:  # The client should receive end message
+                    print("if2")
                     data = sock.recv(1024)
                     print(str(data, "utf-8"))
                     sock.close()
