@@ -19,35 +19,38 @@ BROADCAST_PORT = 13117
 BROADCAST_INTERVAL = 1
 
 def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
-    # creat udp socket and send message in Brodcast_port (13117)
-    i = 0
+    # create udp socket and send message in Brodcast_port (13117)
     x = socket.gethostbyname(socket.gethostname()) #get ip
     ip = x if os.name == 'nt' else get_if_addr(VIRTUAL_NETWORK)
     print("Server started, listening on ip address", ip)
-    start_time = time.time()
+    # start_time = time.time()
+
     # Open new udp socket
     udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    # Set broadcasting mode
-    udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     # Set a timeout
     udp_server.settimeout(0.3)
-
+    # Set broadcasting mode
+    udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    
+    i = 0
+    # constants vars to determent the Packet Formats
     brodcast_message = struct.pack('>IBH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
-    while flag1: #time.time() - start_time < time_limit:
+    while flag1: #while there is no 2 clinets connected..
         try:
             i += 1
-            #print("brodcast send",i,flag1)
+            #send the broadcast message to all..
             udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
         except Exception as e:
             print("Broadcasting error!", e)
             return False
         time.sleep(interval)
+    # the broadcast transmmit is over, close the UDP socket and return to main
     print("end brodcast")    
     udp_server.close()
     return True
 
-
 def listen_for_clients( time_limit=TIME_LIMIT):
+    # global var used to stop the broadcast when 2 clients connect.
     global flag1
     flag1 = True
     #Open server socket in SERVER_TCP_PORT and wait for client to connect 
@@ -55,16 +58,17 @@ def listen_for_clients( time_limit=TIME_LIMIT):
     #Open server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
     serverSocket.setblocking(0)
-    while True and time.time() - start_time < time_limit:
+    #try to create tcp server to connect the clients.
+    while time.time() - start_time < time_limit: #need the true? 
         try:
             serverSocket.bind(('', SERVER_TCP_PORT ))
-            
             break
         except Exception as massage: 
             print('Bind error. Message:', massage)
             time.sleep(1)
-
+    # queue for the amount of client I'm ready to hold..
     serverSocket.listen(5)
+    #list of all the open and running sockets
     socketsList = [serverSocket]
     teamIpNameDict = {}  # team_ip : team_name
     i = 0
@@ -93,9 +97,9 @@ def listen_for_clients( time_limit=TIME_LIMIT):
                     if data:
                         print("Unexpected data from client")
 
-        for sock in exceptional:
-            socketsList.remove(sock)
-            sock.close()
+        # for sock in exceptional:
+        #     socketsList.remove(sock)
+        #     sock.close()
         time.sleep(0.1)
     serverSocket.setblocking(1)
     return teamIpNameDict, socketsList, serverSocket
@@ -125,104 +129,106 @@ def randomQuestion():
     return
 
 def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
-    time.sleep(10)#wait 10 sec before start the game.
+    time.sleep(10) # wait 10 sec before start the game.
     print("start game")
     player1 = []
     player2 = []
     teamName1 = ""
     teamName2 = ""
-    for index, player in enumerate(teamIpNameDict.values()):  # Split teams into groups
-        if player != None:
-            if index % 2 == 0:
-                player1.append(player)
-                teamName1 = player[0]
-            else:
-                player2.append(player)
-                teamName2 = player[0]
+    i=0
+    for player in teamIpNameDict.values():
+        if i==0:
+            player1.append(player)
+            teamName1 = player[0]
+        else:
+            player2.append(player)
+            teamName2 = player[0]
+        i+=1
 
     teams_dictionary = {}
     for player in player1 + player2:
-        teams_dictionary[player[1]] = (player[0], 1 if player in player1 else 2)  # (team_name, group#)
+        # {ip1 : (name,gameID), ip2 : (name,gameID)}
+        teams_dictionary[player[1]] = (player[0], 1 if player in player1 else 2)
 
     message = "Welcome to Quick Maths. \nPlayer 1:"
-
     for player in player1:
         message += player[0]+'\n'
     message += "Player 2:"
     for player in player2:
-        message += player[0]+'\n=='
+        message += player[0]+'\n==\n'
     message += "Please answer the following question as fast as you can:\nHow much is "
 
     tup = randomQuestion()
     qusestuin = tup[0]
     realAns = tup[1]
     message += qusestuin
-    clinetAddresses = []  # Save clients' addresses to send end messages through
+    clinetAddresses = []  # Save clients addresses to send end messages through
     for running_socket in sockets:
         try:
             if running_socket != server:
+                # send the end message
                 running_socket.sendall(bytes(message, "utf-8"))
                 running_socket.setblocking(1)
+                # keep the address of the socket(of the client)
                 clinetAddresses.append(running_socket.getpeername())
+                #close the socket.
                 running_socket.close()
         except Exception as e:
-            print("Error while sending starting messages!", e)
+            print("Error occurred while try to send message to client.")
 
-    start_time = time.time()
+    nowTime = time.time()
     finalMessage = ''
     listSockets = [server] 
     socket_ips = {}
     flag = False
-    while listSockets and time.time() - start_time < time_limit and not flag :
-        # try:
+    # while there is socekts in the list of socktes.
+    while listSockets and time.time() - nowTime < time_limit and not flag :
         readable, writable, exceptional = select.select(listSockets, [], listSockets, 0)
         for sock in readable:
-            
             if sock is server:  
                 connection, client_address = sock.accept()
                 connection.setblocking(0)
                 listSockets.append(connection)
                 socket_ips[connection] = client_address[0]
             else:  # Client send answer
-                data = sock.recv(1) # reading anser from client
-                flag = True
+                data = sock.recv(1) # reading anser from client->1 digit
+                flag = True # stop the loop
                 userAns = data.decode('utf-8')
+                # figure who is connected right now
                 curP = teams_dictionary[socket_ips[connection]][0] 
                 if curP == teamName1:
                     secP = teamName1
                 else:
                     secP = teamName2
+                # begin check the answer we got. follow by announced who win the game.
                 try :
-                    if int(userAns) == realAns: # check if right ans                        
+                    if int(userAns) == realAns: # check if right answer                        
                         finalMessage= whoWon(curP,userAns)
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
                         break 
-                    else:
+                    else: # the second team will win
                         finalMessage = whoWon(secP,userAns) 
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
                         break
-                except:
+                except: # if the client didn't send a digit -> auto lose..
                     finalMessage = whoWon(secP,userAns) 
                     listSockets.remove(sock)
                     sock.close()
                     flag = True
                     break
 
-        for sock in exceptional:
-            listSockets.remove(sock)
-            sock.close()
-   
-        # except Exception as e:
-        #     print("Error while receiving keys!", e)
-    #send the final message to all clinet
+        # for sock in exceptional:
+        #     listSockets.remove(sock)
+        #     sock.close()
 
+    # send the end message to all
     for address in clinetAddresses:
         try:
-            if finalMessage=='':
+            if finalMessage=='':# if no one cliams the winning..
                 finalMessage = "its a Draw!"
             running_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             running_socket.connect(address)
@@ -233,19 +239,17 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             print("Error while sending end messages!", e)
     # server.setblocking(1)
     server.close()
+    # make the UDP server run and transmit again
     flag1=True
-
     print("game end")
 
 def whoWon(name,ans):
     msg = "\nGame over!\nThe correct answer was " + ans + "!\n"
     msg+= "Congratulations to the winner: " + name +"\n"
-    #print(msg)
     return msg
 
 
 if __name__ == "__main__":
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
         while 1:
             broadcast1 = executor.submit(Broadcast)
@@ -257,25 +261,8 @@ if __name__ == "__main__":
                 flag1 = True
             else:
                 i = 0 
+                print("in main, else on len >=2")
                 for open_socket in sockets:
                     open_socket.close()
                     print("close socket")
     executor.shutdown()
-
-# if __name__ == "__main__":
-
-#     executor = ThreadPoolExecutor(2)
-#     while 1:
-#         broadcast1 = executor.submit(Broadcast)
-#         print("end brodcast")
-#         teams_future = executor.submit(listen_for_clients)
-#         team_names, sockets, server = teams_future.result()
-#         if len(sockets)-1 >= NUM_OF_TEAMS:
-#             match = executor.submit(game(team_names, sockets, server))
-#         else:
-#             i = 0 
-#             message = "Cant play alone"
-#             for open_socket in sockets:
-#                 open_socket.close()
-#                 print("close socket")
-# executor.shutdown()
