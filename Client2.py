@@ -5,6 +5,17 @@ import sys
 import select
 import os
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 if os.name != 'nt':
     import tty
     import termios
@@ -34,7 +45,7 @@ def search_server(i):
                 client.close() # close udp socket
                 return addr[0], port_number
         except Exception as e:
-            print("Error occurred while listening for game offers..")
+            print(bcolors.FAIL+"Error occurred while listening for game offers.."+bcolors.ENDC)
         time.sleep(0.1)
 
 def connect_to_server(server_address):
@@ -47,7 +58,7 @@ def connect_to_server(server_address):
         print(message) # welcome message
         return port
     except Exception as e:
-        print("Error occurred while trying to send my name to the server. Trying to find a different server...")
+        print(bcolors.FAIL+"Error occurred while trying to send my name to the server. Trying to find a different server..."+bcolors.ENDC)
         return 0
 
 def client_game(server_address, my_port):
@@ -56,7 +67,7 @@ def client_game(server_address, my_port):
     try:
         listen_socket.bind(('', my_port))
     except Exception as e:
-        print("Error occurred while trying to bind.")
+        print(bcolors.FAIL+"Error occurred while trying to bind."+bcolors.ENDC)
     listen_socket.listen(5)
     listen_socket.settimeout(1)
     socketList = [listen_socket]
@@ -91,7 +102,7 @@ def client_game(server_address, my_port):
                 keys_socket.close()
 
         except Exception as e:
-            print("Error occurred while trying to send messages.", e)
+            print(bcolors.FAIL+"Error occurred while trying to send messages."+bcolors.ENDC)
             break
         time.sleep(0.01)
     # close all open sockets
@@ -117,7 +128,7 @@ if __name__ == "__main__":
                 i += 1
                 my_port = connect_to_server(server_address)
                 if my_port == 0:
-                    print("Server disconnected, listening for offer requests...")
+                    print(bcolors.FAIL+"Server disconnected, listening for offer requests..."+bcolors.ENDC)
                     continue
                 client_game(server_address, my_port)
                 time.sleep(0.1)
@@ -131,7 +142,7 @@ if __name__ == "__main__":
             i += 1
             my_port = connect_to_server(server_address)
             if my_port == 0:
-                print("Server disconnected, listening for offer requests...")
+                print(bcolors.FAIL+"Server disconnected, listening for offer requests..."+bcolors.ENDC)
                 continue
             client_game(server_address, my_port)
             time.sleep(0.1)

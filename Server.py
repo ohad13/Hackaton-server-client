@@ -18,11 +18,22 @@ TIME_LIMIT = 10
 BROADCAST_PORT = 13117
 BROADCAST_INTERVAL = 1
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     # create udp socket and send message in Brodcast_port (13117)
     x = socket.gethostbyname(socket.gethostname()) #get ip
     ip = x if os.name == 'nt' else get_if_addr(VIRTUAL_NETWORK)
-    print("Server started, listening on ip address", ip)
+    print(bcolors.HEADER+"Server started, listening on ip address", bcolors.BOLD+ip+bcolors.ENDC)
     # start_time = time.time()
 
     # Open new udp socket
@@ -41,7 +52,7 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
             #send the broadcast message to all..
             udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
         except Exception as e:
-            print("Broadcasting error!")
+            print(bcolors.FAIL+"Broadcasting error!"+bcolors.ENDC)
             return False
         time.sleep(interval)
     # the broadcast transmmit is over, close the UDP socket and return to main
@@ -58,14 +69,14 @@ def listen_for_clients( time_limit=TIME_LIMIT):
     #Open server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serverSocket.setblocking(0)
+    serverSocket.setblocking(0) # dont block input messeges 
     #try to create tcp server to connect the clients.
-    while time.time() - start_time < time_limit: #need the true? 
+    while time.time() - start_time < time_limit: 
         try:
-            serverSocket.bind(('', SERVER_TCP_PORT ))
+            serverSocket.bind(('', SERVER_TCP_PORT )) 
             break
         except Exception as massage: 
-            print('Bind error. Message:', massage)
+            print(bcolors.FAIL+'Bind error. Message:'+bcolors.ENDC, massage)
             time.sleep(1)
     # queue for the amount of client I'm ready to hold..
     serverSocket.listen(5)
@@ -175,7 +186,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 #close the socket.
                 running_socket.close()
         except Exception as e:
-            print("Error occurred while try to send message to client.")
+            print(bcolors.FAIL+"Error occurred while try to send message to client."+bcolors.ENDC)
 
     nowTime = time.time()
     finalMessage = ''
@@ -189,7 +200,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
         readable, writable, exceptional = select.select(listSockets, [], listSockets, 0)
         for sock in readable:
             if sock is server:  
-                connection, client_address = sock.accept()
+                connection, client_address = sock.accept() # return who is connect
                 connection.setblocking(0)
                 listSockets.append(connection)
                 socket_ips[connection] = client_address[0]
@@ -241,7 +252,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             #open_socket.setblocking(1)
             running_socket.close()
         except Exception as e:
-            print("Error while sending end messages!")
+            print(bcolors.FAIL+"Error while sending end messages!"+bcolors.ENDC)
     # server.setblocking(1)
     server.close()
     # make the UDP server run and transmit again
