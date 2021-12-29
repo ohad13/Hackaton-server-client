@@ -34,7 +34,7 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     
     i = 0
     # constants vars to determent the Packet Formats
-    brodcast_message = struct.pack('>IBH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
+    brodcast_message = struct.pack('IbH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
     while flag1: #while there is no 2 clinets connected..
         try:
             i += 1
@@ -57,6 +57,7 @@ def listen_for_clients( time_limit=TIME_LIMIT):
     start_time = time.time()
     #Open server socket
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+    serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serverSocket.setblocking(0)
     #try to create tcp server to connect the clients.
     while time.time() - start_time < time_limit: #need the true? 
@@ -130,7 +131,7 @@ def randomQuestion():
 
 def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     time.sleep(10) # wait 10 sec before start the game.
-    print("start game")
+    #print("start game")
     player1 = []
     player2 = []
     teamName1 = ""
@@ -144,7 +145,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             player2.append(player)
             teamName2 = player[0]
         i += 1
-    print("player 1 ",player1," player 2 ",player2)
+    #print("player 1 ",player1," player 2 ",player2)
     teams_dictionary = {}
     for player in player1 + player2:
         # {ip1 : (name,gameID), ip2 : (name,gameID)}
@@ -182,7 +183,6 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     socket_ips = {}
     flag = False
 
-    print("-----------",teams_dictionary)
 
     # while there is socekts in the list of socktes.
     while listSockets and time.time() - nowTime < time_limit and not flag :
@@ -204,11 +204,11 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                     secP = teamName2
                 else:
                     secP = teamName1
-                print("current player is ,", curP, " and anwser is ", userAns)
-                print("sec player is ,", secP)
+                # print("current player is ,", curP, " and anwser is ", userAns)
+                # print("sec player is ,", secP)
                 # begin check the answer we got. follow by announced who win the game.
                 try :
-                    if int(userAns) == realAns: # check if right answer                        
+                    if int(userAns) == realAns: # check if right answer     
                         finalMessage= whoWon(curP,realAns)
                         listSockets.remove(sock)
                         sock.close()
@@ -226,11 +226,10 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                     sock.close()
                     flag = True
                     break
-
-        # for sock in exceptional:
-        #     listSockets.remove(sock)
-        #     sock.close()
-
+        time.sleep(0.01)
+        for sock in exceptional:
+            listSockets.remove(sock)
+            sock.close()
     # send the end message to all
     for address in clinetAddresses:
         try:

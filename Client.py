@@ -11,7 +11,7 @@ if os.name != 'nt':
 else:
     import msvcrt
 
-TEAM_NAME = b'ohadddddd\n'
+TEAM_NAME = b'blue team\n'
 MAGIC_COOKIE = 0xabcddcba
 
 def search_server(i):
@@ -28,7 +28,7 @@ def search_server(i):
     while True:
         try:
             data, addr = client.recvfrom(10) # recive the addrress of the server
-            cookie, msg_type, port_number = struct.unpack('>IBH', data)# 'open' the message
+            cookie, msg_type, port_number = struct.unpack('IbH', data)# 'open' the message
             if cookie == MAGIC_COOKIE and msg_type == 0x2:
                 print("Received offer from", addr[0], ", attempting to connect...")
                 client.close() # close udp socket
@@ -93,6 +93,7 @@ def client_game(server_address, my_port):
         except Exception as e:
             print("Error occurred while trying to send messages.", e)
             break
+        time.sleep(0.01)
     # close all open sockets
     for open_socket in socketList:
         open_socket.setblocking(1)
@@ -118,6 +119,8 @@ if __name__ == "__main__":
                 if my_port == 0:
                     print("Server disconnected, listening for offer requests...")
                     continue
+                client_game(server_address, my_port)
+                time.sleep(0.1)
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
     else: # windows
