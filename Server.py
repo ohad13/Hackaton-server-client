@@ -144,7 +144,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             player2.append(player)
             teamName2 = player[0]
         i += 1
-
+    print("player 1 ",player1," player 2 ",player2)
     teams_dictionary = {}
     for player in player1 + player2:
         # {ip1 : (name,gameID), ip2 : (name,gameID)}
@@ -181,6 +181,9 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     listSockets = [server] 
     socket_ips = {}
     flag = False
+
+    print("-----------",teams_dictionary)
+
     # while there is socekts in the list of socktes.
     while listSockets and time.time() - nowTime < time_limit and not flag :
         readable, writable, exceptional = select.select(listSockets, [], listSockets, 0)
@@ -194,28 +197,31 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 data = sock.recv(1) # reading anser from client->1 digit
                 flag = True # stop the loop
                 userAns = data.decode('utf-8')
+
                 # figure who is connected right now
                 curP = teams_dictionary[socket_ips[connection]][0] 
                 if curP == teamName1:
-                    secP = teamName1
-                else:
                     secP = teamName2
+                else:
+                    secP = teamName1
+                print("current player is ,", curP, " and anwser is ", userAns)
+                print("sec player is ,", secP)
                 # begin check the answer we got. follow by announced who win the game.
                 try :
                     if int(userAns) == realAns: # check if right answer                        
-                        finalMessage= whoWon(curP,userAns)
+                        finalMessage= whoWon(curP,realAns)
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
                         break 
                     else: # the second team will win
-                        finalMessage = whoWon(secP,userAns) 
+                        finalMessage = whoWon(secP,realAns) 
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
                         break
                 except: # if the client didn't send a digit -> auto lose..
-                    finalMessage = whoWon(secP,userAns) 
+                    finalMessage = whoWon(secP,realAns) 
                     listSockets.remove(sock)
                     sock.close()
                     flag = True
@@ -244,7 +250,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     print("game end")
 
 def whoWon(name,ans):
-    msg = "\nGame over!\nThe correct answer was " + ans + "!\n"
+    msg = "\nGame over!\nThe correct answer was " + str(ans) + "!\n"
     msg += "Congratulations to the winner: " + name +"\n"
     return msg
 
