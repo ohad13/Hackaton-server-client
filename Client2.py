@@ -11,7 +11,7 @@ if os.name != 'nt':
 else:
     import msvcrt
 
-TEAM_NAME = b'adi\n'
+TEAM_NAME = b'adiiiii\n'
 MAGIC_COOKIE = 0xabcddcba
 
 def search_server(i):

@@ -41,7 +41,7 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
             #send the broadcast message to all..
             udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
         except Exception as e:
-            print("Broadcasting error!", e)
+            print("Broadcasting error!")
             return False
         time.sleep(interval)
     # the broadcast transmmit is over, close the UDP socket and return to main
@@ -135,15 +135,15 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     player2 = []
     teamName1 = ""
     teamName2 = ""
-    i=0
+    i = 0
     for player in teamIpNameDict.values():
-        if i==0:
+        if i == 0:
             player1.append(player)
             teamName1 = player[0]
         else:
             player2.append(player)
             teamName2 = player[0]
-        i+=1
+        i += 1
 
     teams_dictionary = {}
     for player in player1 + player2:
@@ -228,7 +228,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     # send the end message to all
     for address in clinetAddresses:
         try:
-            if finalMessage=='':# if no one cliams the winning..
+            if finalMessage == '': # if no one cliams the winning..
                 finalMessage = "its a Draw!"
             running_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             running_socket.connect(address)
@@ -236,7 +236,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
             #open_socket.setblocking(1)
             running_socket.close()
         except Exception as e:
-            print("Error while sending end messages!", e)
+            print("Error while sending end messages!")
     # server.setblocking(1)
     server.close()
     # make the UDP server run and transmit again
@@ -245,7 +245,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
 
 def whoWon(name,ans):
     msg = "\nGame over!\nThe correct answer was " + ans + "!\n"
-    msg+= "Congratulations to the winner: " + name +"\n"
+    msg += "Congratulations to the winner: " + name +"\n"
     return msg
 
 
