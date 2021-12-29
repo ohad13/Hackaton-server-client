@@ -35,22 +35,21 @@ def Broadcast(time_limit=TIME_LIMIT, interval=BROADCAST_INTERVAL):
     ip = x if os.name == 'nt' else get_if_addr(VIRTUAL_NETWORK)
     print(bcolors.HEADER+"Server started, listening on ip address", bcolors.BOLD+ip+bcolors.ENDC)
     # start_time = time.time()
-
+    ipex =".255.255"
+    y = ip.split(".")
+    fix_ip=y[0]+"."+y[1]+ipex
     # Open new udp socket
     udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     # Set a timeout
     udp_server.settimeout(0.3)
     # Set broadcasting mode
     udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    
-    i = 0
     # constants vars to determent the Packet Formats
     brodcast_message = struct.pack('IbH', MAGIC_COOKIE, MESSAGE_TYPE, SERVER_TCP_PORT)
     while flag1: #while there is no 2 clinets connected..
         try:
-            i += 1
             #send the broadcast message to all..
-            udp_server.sendto(brodcast_message, (ip, BROADCAST_PORT))
+            udp_server.sendto(brodcast_message, (fix_ip, BROADCAST_PORT))
         except Exception as e:
             print(bcolors.FAIL+"Broadcasting error!"+bcolors.ENDC)
             return False
@@ -141,6 +140,7 @@ def randomQuestion():
     return
 
 def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
+    print('in game')
     time.sleep(10) # wait 10 sec before start the game.
     #print("start game")
     player1 = []
@@ -161,15 +161,19 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
     for player in player1 + player2:
         # {ip1 : (name,gameID), ip2 : (name,gameID)}
         teams_dictionary[player[1]] = (player[0], 1 if player in player1 else 2)
-
+    
     message = "Welcome to Quick Maths. \nPlayer 1:"
     for player in player1:
+        if not player:
+            player ="adi" ##################################rmove
         message += player[0]+'\n'
     message += "Player 2:"
     for player in player2:
+        if not player:
+            player ="ohad" #################################remove
         message += player[0]+'\n==\n'
     message += "Please answer the following question as fast as you can:\nHow much is "
-
+    
     tup = randomQuestion()
     qusestuin = tup[0]
     realAns = tup[1]
@@ -187,7 +191,7 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 running_socket.close()
         except Exception as e:
             print(bcolors.FAIL+"Error occurred while try to send message to client."+bcolors.ENDC)
-
+    
     nowTime = time.time()
     finalMessage = ''
     listSockets = [server] 
@@ -219,20 +223,24 @@ def game(teamIpNameDict, sockets, server, time_limit=TIME_LIMIT):
                 # print("sec player is ,", secP)
                 # begin check the answer we got. follow by announced who win the game.
                 try :
+                    print(realAns)
                     if int(userAns) == realAns: # check if right answer     
                         finalMessage= whoWon(curP,realAns)
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
+                        print(finalMessage)
                         break 
                     else: # the second team will win
                         finalMessage = whoWon(secP,realAns) 
+                        print(finalMessage)
                         listSockets.remove(sock)
                         sock.close()
                         flag = True
                         break
                 except: # if the client didn't send a digit -> auto lose..
                     finalMessage = whoWon(secP,realAns) 
+                    print(finalMessage)
                     listSockets.remove(sock)
                     sock.close()
                     flag = True
@@ -269,7 +277,7 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor() as executor:
         while 1:
             broadcast1 = executor.submit(Broadcast)
-            print("brodcast")
+            
             teams_future = executor.submit(listen_for_clients)
             team_names, sockets, server = teams_future.result()
             if len(sockets)-1 >= NUM_OF_TEAMS:
@@ -277,8 +285,8 @@ if __name__ == "__main__":
                 flag1 = True
             else:
                 i = 0 
-                print("in main, else on len >=2")
+                # print("in main, else on len >=2")
                 for open_socket in sockets:
                     open_socket.close()
-                    print("close socket")
+                    print("close socket..")
     executor.shutdown()
